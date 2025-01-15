@@ -3,13 +3,15 @@
     "version": "1.0.0",
     "main": "src/main.js",
     "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "build": "esbuild main.js --bundle --outfile=dist/bundle.js --platform=browser --format=esm"
     },
     "keywords": [],
     "author": "",
     "license": "ISC",
     "description": "",
     "dependencies": {
-        "@snap/camera-kit": "^1.1.0"
+        "@snap/camera-kit": "^1.1.0",
+        "esbuild": "^0.24.2"
     }
 }

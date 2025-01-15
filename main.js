@@ -1,10 +1,11 @@
-import { bootstrapCameraKit } from './node_modules/@snap/camera-kit/dist/index.js';
+import { bootstrapCameraKit } from '@snap/camera-kit';
 
 (async function () {
-    try {
-        const cameraKit = await bootstrapCameraKit({
-            apiToken: 'eyJhbGciOiJIUzI1NiIsImtpZCI6IkNhbnZhc1MyU0hNQUNQcm9kIiwidHlwIjoiSldUIn0.eyJhdWQiOiJjYW52YXMtY2FudmFzYXBpIiwiaXNzIjoiY2FudmFzLXMyc3Rva2VuIiwibmJmIjoxNzI2NTY1MzEwLCJzdWIiOiIyN2NmNDQwYy04YjBkLTQ5ZDEtYTM2MC04YjdkODQ5OTM3ZWJ-UFJPRFVDVElPTn5kZTg3ZmFmMy0yY2M3LTRmNzMtYjY5ZS0zZTgzOTZkYmZkYjYifQ.eftt1t2swdSw2TTML523oX7-PEX0hJgUN_6CSgog8U0',
-        });
+  try {
+     bootstrapCameraKit({
+      apiToken: 'eyJhbGciOiJIUzI1NiIsImtpZCI6IkNhbnZhc1MyU0hNQUNQcm9kIiwidHlwIjoiSldUIn0.eyJhdWQiOiJjYW52YXMtY2FudmFzYXBpIiwiaXNzIjoiY2FudmFzLXMyc3Rva2VuIiwibmJmIjoxNzI2NTY1MzEwLCJzdWIiOiIyN2NmNDQwYy04YjBkLTQ5ZDEtYTM2MC04YjdkODQ5OTM3ZWJ-UFJPRFVDVElPTn5kZTg3ZmFmMy0yY2M3LTRmNzMtYjY5ZS0zZTgzOTZkYmZkYjYifQ.eftt1t2swdSw2TTML523oX7-PEX0hJgUN_6CSgog8U0'
+    }).then( async (cameraKit) => {
+       
         const liveRenderTarget = document.getElementById('canvas');
         const aspectRatio = window.innerWidth / window.innerHeight;
         liveRenderTarget.width = window.innerWidth;
@@ -25,6 +26,7 @@ import { bootstrapCameraKit } from './node_modules/@snap/camera-kit/dist/index.j
         );
 
         await session.applyLens(lens);
+      });
     } catch (error) {
         console.error('Error initializing Camera Kit:', error);
        if (error instanceof Error) {
