@@ -83,7 +83,7 @@ async function init() {
     );
     await session.applyLens(lens);
     bindFlipCamera(session);
-    bindRecorder(session);
+    bindRecorder();
     bindModal()
 }
 
@@ -139,7 +139,7 @@ async function updateCamera(session: CameraKitSession) {
   }, 500)
 }
 
-function bindRecorder(session: CameraKitSession) {
+function bindRecorder() {
     recordButton.addEventListener('click', () => {
         if (mediaRecorder?.state === 'recording') {
             stopRecording();
@@ -154,7 +154,10 @@ async function startRecording() {
     recordButton.classList.add('recording');
     progressRing.style.display = 'block';
 
+
     const mediaStream = liveRenderTarget.captureStream(30);
+
+
     mediaRecorder = new MediaRecorder(mediaStream);
 
     const chunks: BlobPart[] = [];
