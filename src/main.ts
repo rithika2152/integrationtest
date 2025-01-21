@@ -145,19 +145,16 @@ function bindRecorder(session: CameraKitSession) {
             stopRecording();
         }
         else {
-            startRecording(session);
+            startRecording();
         }
     });
 }
 
-async function startRecording(session: CameraKitSession) {
+async function startRecording() {
     recordButton.classList.add('recording');
     progressRing.style.display = 'block';
 
-
     const mediaStream = liveRenderTarget.captureStream(30);
-
-
     mediaRecorder = new MediaRecorder(mediaStream);
 
     const chunks: BlobPart[] = [];
