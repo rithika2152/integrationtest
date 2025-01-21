@@ -9,7 +9,7 @@ const liveRenderTarget = document.getElementById('canvas') as HTMLCanvasElement;
 const flipButton = document.getElementById('flip-button') as HTMLButtonElement;
 const recordButton = document.getElementById('record-button') as HTMLButtonElement;
 const progressRing = document.getElementById('progress-ring') as HTMLDivElement;
-const progressPath = document.getElementById('progress-path') as SVGPathElement;
+const progressPath = document.getElementById('progress-path');
 const previewModal = document.getElementById('preview-modal') as HTMLDivElement;
 const previewVideo = document.getElementById('preview-video') as HTMLVideoElement;
 const shareButton = document.getElementById('share-button') as HTMLButtonElement;
@@ -192,8 +192,12 @@ function updateProgress() {
     const progressPercentage = Math.min(100, (elapsedTime / 1000 / RECORD_DURATION) * 100);
     const circumference = 2 * Math.PI * 30;
     const dashOffset = circumference * (1 - progressPercentage / 100);
-    progressPath.style.strokeDashoffset = String(dashOffset);
-
+    
+    if(progressPath instanceof SVGPathElement)
+    {
+       progressPath.style.strokeDashoffset = String(dashOffset);
+    }
+    
 
     if (elapsedTime / 1000 >= RECORD_DURATION) {
         stopRecording();
@@ -207,7 +211,11 @@ function stopRecording() {
         mediaRecorder.stop();
     }
     recordingStartTime = null;
-    progressPath.style.strokeDashoffset = String(188);
+     if(progressPath instanceof SVGPathElement)
+     {
+         progressPath.style.strokeDashoffset = String(188);
+     }
+    
     recordButton.classList.remove('recording');
     progressRing.style.display = 'none';
 }
