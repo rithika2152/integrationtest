@@ -219,40 +219,56 @@ function stopRecording() {
     recordButton.classList.remove('recording');
     progressRing.style.display = 'none';
 }
-function bindModal(){
+function bindModal() {
     closeModalButton.addEventListener('click', () => {
         previewModal.style.display = 'none';
-       previewModal.classList.remove('show');
+        previewModal.classList.remove('show');
         previewVideo.pause();
         previewVideo.currentTime = 0;
-
     });
-      shareButton.addEventListener('click', async() => {
-        if (downloadUrl)
-        {
-            const blob = await fetch(downloadUrl).then(r => r.blob());
-             const filesArray = [
-              new File([blob], 'video.mp4', {type: 'video/mp4'})
-            ];
-            if(navigator.canShare && navigator.canShare({files: filesArray}))
-              {
-                    navigator.share({
-                      files: filesArray,
-                    })
+
+    shareButton.addEventListener('click', async () => {
+        if (downloadUrl) {
+            try {
+                const response = await fetch(downloadUrl);
+                if (!response.ok) {
+                  throw new Error(`Failed to fetch video: ${response.status} ${response.statusText}`);
                 }
+                const blob = await response.blob();
+
+                // Explicitly create a Blob with the correct MIME type.
+                const videoBlob = new Blob([blob], { type: 'video/mp4' });
+
+                // Create a File object with the correct name and type.
+                const videoFile = new File([videoBlob], 'video.mp4', { type: 'video/mp4' });
+
+                //Check for share and then share it.
+                if (navigator.canShare && navigator.canShare({ files: [videoFile] })) {
+                    await navigator.share({
+                        files: [videoFile],
+                        title: 'Camera Kit Recording', // Optional: Add a title
+                    });
+                } else {
+                    console.error('Sharing not supported or file is incompatible.');
+                     alert('Sharing not supported in this browser or the file type is incompatible.');
+                }
+            } catch (error) {
+                console.error('Error sharing video:', error);
+                alert(`Error sharing video: ${error}`);
+            }
         }
     });
+
     saveButton.addEventListener('click', () => {
-      if (downloadUrl)
-      {
-        const link = document.createElement('a');
-        link.setAttribute('style', 'display: none');
-        link.href = downloadUrl;
-        link.download = 'camera-kit-web-recording.mp4';
-        link.click();
-        link.remove();
-      }
-  });
+        if (downloadUrl) {
+            const link = document.createElement('a');
+            link.setAttribute('style', 'display: none');
+            link.href = downloadUrl;
+            link.download = 'camera-kit-web-recording.mp4';
+            link.click();
+            link.remove();
+        }
+    });
 }
 
 init();
