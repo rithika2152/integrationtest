@@ -5,7 +5,7 @@ import {
     Transform2D,
 } from '@snap/camera-kit';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile, toBlobURL } from '@ffmpeg/util';
+import { toBlobURL } from '@ffmpeg/util';
 
 
 const liveRenderTarget = document.getElementById('canvas') as HTMLCanvasElement;
