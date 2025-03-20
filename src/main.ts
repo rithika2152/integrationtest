@@ -232,7 +232,7 @@ function bindModal(){
         {
             const blob = await fetch(downloadUrl).then(r => r.blob());
              const filesArray = [
-              new File([blob], 'video.webm', {type: 'video/webm'})
+              new File([blob], 'video.mp4', {type: 'video/mp4'})
             ];
             if(navigator.canShare && navigator.canShare({files: filesArray}))
               {
