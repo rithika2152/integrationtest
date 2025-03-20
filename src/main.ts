@@ -4,6 +4,9 @@ import {
     createMediaStreamSource,
     Transform2D,
 } from '@snap/camera-kit';
+import { FFmpeg } from '@ffmpeg/ffmpeg';
+import { fetchFile, toBlobURL } from '@ffmpeg/util';
+
 
 const liveRenderTarget = document.getElementById('canvas') as HTMLCanvasElement;
 const flipButton = document.getElementById('flip-button') as HTMLButtonElement;
@@ -22,10 +25,16 @@ let mediaStream: MediaStream;
 let isFlipping = false;
 let currentRotation = 0; // Track the current rotation
 let session: CameraKitSession;
-let mediaRecorder: MediaRecorder | null = null;
+//let mediaRecorder: MediaRecorder | null = null; // No longer needed
 let downloadUrl: string | null = null;
 let recordingStartTime: number | null = null;
 const RECORD_DURATION = 60;
+
+// FFmpeg-related variables
+let ffmpeg: FFmpeg | null = null;
+let isFFmpegLoaded = false;
+const ffmpegCoreUrl = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js';
+
 
 async function init() {
     const cameraKit = await bootstrapCameraKit({
@@ -85,6 +94,7 @@ async function init() {
     bindFlipCamera(session);
     bindRecorder();
     bindModal()
+    await loadFFmpeg(); // Load FFmpeg on initialization
 }
 
 
@@ -140,84 +150,206 @@ async function updateCamera(session: CameraKitSession) {
 }
 
 function bindRecorder() {
-    recordButton.addEventListener('click', () => {
-        if (mediaRecorder?.state === 'recording') {
-            stopRecording();
-        }
-        else {
-            startRecording();
+    recordButton.addEventListener('click', async () => {
+        if (recordButton.classList.contains('recording')) {
+            await stopRecording(); // Await stopRecording
+        } else {
+            await startRecording(); // Await startRecording
         }
     });
 }
+
+async function loadFFmpeg() {
+   try {
+    ffmpeg = new FFmpeg();
+    ffmpeg.on("log", ({ message }) => {
+      console.log(message); // Log FFmpeg messages
+    });
+     await ffmpeg.load({
+            coreURL: await toBlobURL(ffmpegCoreUrl, 'text/javascript'),
+        });
+    isFFmpegLoaded = true;
+    console.log("FFmpeg loaded successfully");
+  } catch (error) {
+    console.error("Failed to load FFmpeg:", error);
+    alert("Failed to load FFmpeg: " + error); // Notify the user
+    isFFmpegLoaded = false;
+  }
+}
+
+
+
+// Modify startRecording to capture frames and use FFmpeg
+let intervalId: number | null = null;
+const frameRate = 30; // Target frame rate
+const frameInterval = 1000 / frameRate;
+const frames: Uint8Array[] = [];
 
 async function startRecording() {
-    recordButton.classList.add('recording');
-    progressRing.style.display = 'block';
-
-
-    const mediaStream = liveRenderTarget.captureStream(30);
-
-
-    mediaRecorder = new MediaRecorder(mediaStream);
-
-    const chunks: BlobPart[] = [];
-
-    mediaRecorder.addEventListener('dataavailable', (event) => {
-        if (event.data.size > 0) {
-            chunks.push(event.data);
-        }
-    });
-
-    mediaRecorder.addEventListener('stop', () => {
-        const blob = new Blob(chunks);
-        downloadUrl = window.URL.createObjectURL(blob);
-        previewVideo.src = downloadUrl;
-        previewModal.style.display = 'flex'
-           previewModal.classList.add('show');
-          recordButton.classList.remove('recording');
-        progressRing.style.display = 'none';
-    });
-
-    mediaRecorder.start();
-    recordingStartTime = Date.now();
-    updateProgress();
-}
-
-function updateProgress() {
-    if (!mediaRecorder || mediaRecorder.state !== 'recording' || !recordingStartTime) {
+    if (!isFFmpegLoaded) {
+        alert("FFmpeg is not loaded yet. Please wait.");
         return;
     }
 
-    const elapsedTime = Date.now() - recordingStartTime;
-    const progressPercentage = Math.min(100, (elapsedTime / 1000 / RECORD_DURATION) * 100);
-    const circumference = 2 * Math.PI * 30;
-    const dashOffset = circumference * (1 - progressPercentage / 100);
-    
+    recordButton.classList.add('recording');
+    progressRing.style.display = 'block';
+    frames.length = 0; // Clear previous frames
+    recordingStartTime = Date.now();
+     intervalId = window.setInterval(() => {
+       captureFrame();
+    }, frameInterval);
+    updateProgress(); // Start updating the progress
+}
+function captureFrame() {
+     if (!recordingStartTime) return;
+
+    const ctx = liveRenderTarget.getContext('2d');
+    if (!ctx) {
+        console.error("Could not get 2D context from canvas");
+        return;
+    }
+
+    // Draw the current canvas state to an offscreen canvas
+    const offscreenCanvas = document.createElement('canvas');
+    offscreenCanvas.width = liveRenderTarget.width;
+    offscreenCanvas.height = liveRenderTarget.height;
+    const offscreenCtx = offscreenCanvas.getContext('2d');
+    if (!offscreenCtx) {
+      console.error("Could not create offscreen context");
+      return;
+    }
+    offscreenCtx.drawImage(liveRenderTarget, 0, 0);
+
+    // Get the pixel data from the offscreen canvas
+    const imageData = offscreenCtx.getImageData(0, 0, offscreenCanvas.width, offscreenCanvas.height);
+
+    // Convert ImageData to Uint8Array and store it
+      frames.push(new Uint8Array(imageData.data.buffer));
+
+}
+
+async function stopRecording() {
+  recordButton.classList.remove('recording');
+    progressRing.style.display = 'none';
+    if (intervalId !== null) {
+        clearInterval(intervalId);
+        intervalId = null;
+    }
+    recordingStartTime = null;
+    if (progressPath instanceof SVGPathElement) {
+        progressPath.style.strokeDashoffset = String(188);
+    }
+
+    if (frames.length > 0 && ffmpeg) {
+         try {
+           await encodeVideoWithFFmpeg(); // Encode using FFmpeg
+         } catch (error)
+         {
+            console.error("FFmpeg encoding failed: ", error);
+            alert("FFmpeg encoding failed: " + error);
+         }
+
+    } else {
+        console.warn("No frames to encode or FFmpeg not loaded.");
+         alert("No frames to encode or FFmpeg not loaded.");
+    }
+
+    frames.length = 0; // Reset frames after processing
+
+}
+
+
+async function encodeVideoWithFFmpeg() {
+     if (!ffmpeg) {
+        console.error("FFmpeg instance is null.");
+        return;
+    }
+    const fileName = 'input.data';
+    const outputFileName = 'output.mp4';
+    const canvasWidth = liveRenderTarget.width;
+    const canvasHeight = liveRenderTarget.height;
+    // Combine all frames into a single Uint8Array.
+    const totalLength = frames.reduce((acc, frame) => acc + frame.length, 0);
+    const combinedFrames = new Uint8Array(totalLength);
+    let offset = 0;
+    for (const frame of frames) {
+      combinedFrames.set(frame, offset);
+       offset += frame.length;
+    }
+
+      //Write the combined frames data.
+     await ffmpeg.writeFile(fileName, combinedFrames);
+
+    // FFmpeg command
+    // -f rawvideo: Specifies input format is raw video.
+    // -pix_fmt rgba: Specifies input pixel format is RGBA.
+    // -s ${canvasWidth}x${canvasHeight}: Sets input resolution.
+    // -r ${frameRate}: Sets input frame rate.
+    // -i ${fileName}: Specifies the input file (our raw frame data).
+    // -c:v libx264: Encodes the video using the H.264 codec (libx264).
+    // -pix_fmt yuv420p: Sets output pixel format to YUV420P (very common for H.264).  This is important for compatibility.
+    // -preset veryfast:  Sets encoding speed/quality tradeoff.  "veryfast" gives good speed.  You can try others like "ultrafast", "superfast", "fast", "medium", "slow", "slower", "veryslow".
+    // -crf 23: Sets the Constant Rate Factor (CRF).  Lower values = higher quality, larger files.  Higher values = lower quality, smaller files.  23 is a good default.  Range is 0-51.
+    // -an: Disables audio (since we don't have audio in this case).
+    // ${outputFileName}: Specifies the output file name.
+
+     try {
+         await ffmpeg.exec([
+        '-f', 'rawvideo',
+        '-pix_fmt', 'rgba',
+        '-s', `${canvasWidth}x${canvasHeight}`,
+        '-r', `${frameRate}`,
+        '-i', fileName,
+        '-c:v', 'libx264',
+        '-pix_fmt', 'yuv420p',
+        '-preset', 'veryfast',
+        '-crf', '23',
+        '-an',
+        outputFileName
+    ]);
+
+    } catch (error)
+     {
+         console.log(error);
+    }
+
+
+    const data = await ffmpeg.readFile(outputFileName);
+    const blob = new Blob([data], { type: 'video/mp4' });
+    downloadUrl = URL.createObjectURL(blob);
+
+    // Update preview
+    previewVideo.src = downloadUrl;
+    previewModal.style.display = 'flex';
+    previewModal.classList.add('show');
+    await ffmpeg.deleteFile(fileName);
+    await ffmpeg.deleteFile(outputFileName);
+
+}
+
+function updateProgress() {
+  if (!recordingStartTime) {
+    return;
+  }
+  const elapsedTime = Date.now() - recordingStartTime;
+  const progressPercentage = Math.min(100, (elapsedTime / 1000 / RECORD_DURATION) * 100);
+  const circumference = 2 * Math.PI * 30;
+  const dashOffset = circumference * (1 - progressPercentage / 100);
+
     if(progressPath instanceof SVGPathElement)
     {
        progressPath.style.strokeDashoffset = String(dashOffset);
     }
-    
 
-    if (elapsedTime / 1000 >= RECORD_DURATION) {
-        stopRecording();
-    } else {
-        requestAnimationFrame(updateProgress);
-    }
-}
+  if (elapsedTime / 1000 >= RECORD_DURATION) {
+      stopRecording(); // Trigger stopRecording when time limit is reached
+  } else {
+    // Continue updating progress if recording is still ongoing
+       if (recordButton.classList.contains('recording')) {
+           requestAnimationFrame(updateProgress);
+       }
 
-function stopRecording() {
-    if (mediaRecorder && mediaRecorder.state === 'recording') {
-        mediaRecorder.stop();
-    }
-    recordingStartTime = null;
-     if(progressPath instanceof SVGPathElement)
-     {
-         progressPath.style.strokeDashoffset = String(188);
-     }
-    
-    recordButton.classList.remove('recording');
-    progressRing.style.display = 'none';
+  }
 }
 function bindModal() {
     closeModalButton.addEventListener('click', () => {
@@ -225,6 +357,10 @@ function bindModal() {
         previewModal.classList.remove('show');
         previewVideo.pause();
         previewVideo.currentTime = 0;
+        if (downloadUrl) {
+          URL.revokeObjectURL(downloadUrl); //Clean the download URL
+          downloadUrl = null;
+        }
     });
 
     shareButton.addEventListener('click', async () => {
