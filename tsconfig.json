@@ -1,24 +1,16 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "useDefineForClassFields": true,
-    "module": "ESNext",
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "skipLibCheck": true,
-
-    /* Bundler mode */
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "isolatedModules": true,
-    "moduleDetection": "force",
-    "noEmit": true,
-
-    /* Linting */
+    "target": "es2020",  // Or a similar modern target
+    "moduleResolution": "node",
+    "module": "esnext",
+    "esModuleInterop": true,
+    "types": ["@ffmpeg/ffmpeg"],
+    "forceConsistentCasingInFileNames": true,
     "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "skipLibCheck": true,
+    "jsx": "react-jsx", // If you're using React
+    "lib": ["dom", "es2020"]
   },
-  "include": ["src"]
+  "include": ["src/**/*"], // or wherever your source files are
+  "exclude": ["node_modules"]
 }
