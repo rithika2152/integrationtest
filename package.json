@@ -9,8 +9,11 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.15",
     "@types/ffmpeg": "^1.0.7",
+    "@types/node": "^22.13.13",
     "@types/raf": "^3.4.0",
+    "@types/ws": "^8.18.0",
     "typescript": "^5.8.2",
     "vite": "^6.2.2"
   },
