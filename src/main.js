@@ -1,4 +1,4 @@
-import { createFFmpeg, fetchFile } from '@ffmpeg/ffmpeg';
+import { fetchFile } from '@ffmpeg/util';
 import { Transform2D, bootstrapCameraKit, createMediaStreamSource } from '@snap/camera-kit';
 
 const liveRenderTarget = document.getElementById('canvas');
