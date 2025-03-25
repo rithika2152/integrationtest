@@ -21,6 +21,7 @@
   "dependencies": {
     "@ffmpeg/util": "^0.12.2",
     "@snap/camera-kit": "^1.2.0",
+    "ffmpeg-static": "^5.2.0",
     "raf": "^3.4.1"
   }
 }
